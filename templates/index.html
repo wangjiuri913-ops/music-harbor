@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MusicHarbor · 音乐采集站</title>
+  <meta name="description" content="基于 Python 爬虫与公开音乐接口的网页音乐搜索、试听与下载">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">♪</span>
+      <span class="brand-copy">
+        <strong>MusicHarbor</strong>
+        <small>音乐采集站</small>
+      </span>
+    </a>
+    <nav class="source-tabs" aria-label="音源选择">
+      <button type="button" class="tab is-active" data-source="all">全部音源</button>
+      {% for source in sources %}
+      <button type="button" class="tab" data-source="{{ source.id }}">{{ source.name }}</button>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Python Crawler · Public Music APIs</p>
+      <h1>把想听的歌，<br><span>从网海里捞上来。</span></h1>
+      <p class="hero-desc">
+        用 Python 爬虫聚合公开音乐接口，搜索、在线播放、下载一步到位。当前接入 Audius（完整曲目）与 iTunes 官方接口（30 秒试听）。
+      </p>
+
+      <form class="search" id="search-form" role="search">
+        <span class="search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M16.5 16.5 21 21"></path>
+          </svg>
+        </span>
+        <input id="search-input" type="search" name="q" placeholder="搜索歌曲、歌手或关键词，例如：周杰伦、晴天、lofi" autocomplete="off" maxlength="80" aria-label="搜索关键词">
+        <button class="search-btn" id="search-btn" type="submit">搜索</button>
+      </form>
+
+      <div class="chips" aria-label="热门搜索">
+        <button type="button" class="chip" data-q="周杰伦">周杰伦</button>
+        <button type="button" class="chip" data-q="晴天">晴天</button>
+        <button type="button" class="chip" data-q="Taylor Swift">Taylor Swift</button>
+        <button type="button" class="chip" data-q="lofi">lofi</button>
+        <button type="button" class="chip" data-q="钢琴">钢琴</button>
+        <button type="button" class="chip" data-q="粤语">粤语</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="搜索结果">
+      <div class="panel-head">
+        <h2>搜索结果 <span class="count" id="result-count">—</span></h2>
+        <p class="panel-note">数据来自公开接口，仅供学习交流，请遵守各平台使用条款</p>
+      </div>
+      <div class="results" id="results">
+        <div class="empty">
+          <div class="empty-icon">♪</div>
+          <p class="empty-title">还没有开始搜索</p>
+          <p class="empty-desc">输入关键词，或点击上面的热门推荐试试。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="player-bar" aria-label="播放器">
+    <div class="now-playing">
+      <div class="np-cover" id="np-cover"><span>♪</span></div>
+      <div class="np-meta">
+        <p class="np-title" id="np-title">未在播放</p>
+        <p class="np-artist" id="np-artist">选择一首歌开始</p>
+      </div>
+    </div>
+
+    <div class="player-main">
+      <div class="controls">
+        <button type="button" class="icon-btn" id="prev-btn" aria-label="上一首">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="4" y="4.5" width="2.2" height="15" rx="1" fill="currentColor" stroke="none"></rect>
+            <path d="M19 4.2 10 12l9 7.8z" fill="currentColor" stroke="none"></path>
+          </svg>
+        </button>
+        <button type="button" class="play-btn" id="play-btn" aria-label="播放">
+          <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 4.5v15l12-7.5z" fill="currentColor"></path></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" hidden>
+            <rect x="7.5" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"></rect>
+            <rect x="13.1" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"></rect>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="next-btn" aria-label="下一首">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="17.8" y="4.5" width="2.2" height="15" rx="1" fill="currentColor" stroke="none"></rect>
+            <path d="M5 4.2 14 12l-9 7.8z" fill="currentColor" stroke="none"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="progress-row">
+        <span class="time" id="time-current">0:00</span>
+        <input class="range" id="progress" type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+        <span class="time" id="time-total">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-side">
+      <div class="volume">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M4 9.5v5h3.6L12 18V6l-4.4 3.5z"></path>
+          <path d="M15 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+          <path d="M17.6 5.8a8.4 8.4 0 0 1 0 12.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+        <input class="range range-volume" id="volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
+      </div>
+      <a class="download" id="download-current" href="#" aria-disabled="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 3v12"></path>
+          <path d="M7.5 10.5 12 15l4.5-4.5"></path>
+          <path d="M4.5 20h15"></path>
+        </svg>
+        <span>下载</span>
+      </a>
+    </div>
+  </footer>
+
+  <audio id="audio" preload="none"></audio>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
